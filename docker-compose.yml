@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: material_tracker
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: material_tracker_production
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/esquema_normalizado.sql:/docker-entrypoint-initdb.d/01_esquema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U material_tracker -d material_tracker_production"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      RAILS_ENV: production
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      DATABASE_URL: postgres://material_tracker:${DB_PASSWORD}@db:5432/material_tracker_production
+      RAILS_MAX_THREADS: 5
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    networks:
+      - backend
+
+volumes:
+  pgdata:
+
+networks:
+  backend:
