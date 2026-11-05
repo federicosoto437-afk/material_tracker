@@ -1,5 +1,5 @@
 class MaterialsController < ApplicationController
-  before_action :set_material, only: [:show, :update, :destroy]
+  before_action :set_material, only: [:show, :update, :destroy, :nivel]
   before_action -> { require_role("admin") }, only: [:create, :update, :destroy]
 
   def index
@@ -8,6 +8,17 @@ class MaterialsController < ApplicationController
 
   def show
     render json: material_json(@material)
+  end
+
+  def nivel
+    almacen = params[:almacen_id].present? ? Warehouse.find(params[:almacen_id]) : nil
+    hasta = params[:hasta].present? ? Time.zone.parse(params[:hasta]) : nil
+    render json: {
+      sku: @material.sku,
+      almacen: almacen&.name || "Todos",
+      hasta: hasta || Time.current,
+      nivel: @material.nivel_calculado(almacen: almacen, hasta: hasta)
+    }
   end
 
   def create

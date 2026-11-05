@@ -15,4 +15,7 @@ class Material < ApplicationRecord
   def stock_bajo?
     total_stock < min_stock
   end
+    def nivel_calculado(almacen: nil, hasta: nil)
+    NivelInventario.de(id, almacen_id: almacen&.id, hasta: hasta)
+  end
 end

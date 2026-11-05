@@ -1,0 +1,32 @@
+<h1>Conciliación de inventario</h1>
+<p>Nivel calculado desde los movimientos contra el stock registrado.</p>
+<table>
+  <thead>
+    <tr>
+      <th>SKU</th>
+      <th>Material</th>
+      <th>Almacén</th>
+      <th>Entradas</th>
+      <th>Salidas</th>
+      <th>Ajustes</th>
+      <th>Nivel calculado</th>
+      <th>Stock registrado</th>
+      <th>Diferencia</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @filas.each do |fila| %>
+      <tr class="<%= "bajo" unless fila["diferencia"].to_d.zero? %>">
+        <td><%= fila["sku"] %></td>
+        <td><%= fila["material"] %></td>
+        <td><%= fila["almacen"] %></td>
+        <td><%= number_with_precision(fila["entradas"], precision: 2) %></td>
+        <td><%= number_with_precision(fila["salidas"], precision: 2) %></td>
+        <td><%= number_with_precision(fila["ajustes"], precision: 2) %></td>
+        <td><%= number_with_precision(fila["nivel"], precision: 2) %></td>
+        <td><%= number_with_precision(fila["stock_registrado"], precision: 2) %></td>
+        <td><%= number_with_precision(fila["diferencia"], precision: 2) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

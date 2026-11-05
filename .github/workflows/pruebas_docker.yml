@@ -1,0 +1,58 @@
+name: Pruebas en Docker
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: material_tracker
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U material_tracker"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: localhost
+      DB_USERNAME: material_tracker
+      DB_PASSWORD: postgres
+      PARALLEL_WORKERS: 1
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar el cliente de PostgreSQL 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+
+      - name: Instalar Ruby y las gemas
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Crear la base de datos en el contenedor
+        run: bin/rails db:create db:schema:load
+
+      - name: Verificar la funcion dentro del contenedor
+        run: psql -h localhost -U material_tracker -d material_tracker_test -c "\df nivel*"
+        env:
+          PGPASSWORD: postgres
+
+      - name: Ejecutar las pruebas
+        run: bin/rails test

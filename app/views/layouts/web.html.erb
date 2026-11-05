@@ -13,6 +13,7 @@
       <nav>
         <%= link_to "Inventario", inventario_path %>
         <%= link_to "Registrar movimiento", new_movimiento_path %>
+                <%= link_to "Conciliación", conciliacion_path %>
         <span><%= usuario_actual.name %> (<%= usuario_actual.role %>)</span>
         <%= button_to "Salir", logout_path, method: :delete, class: "boton-secundario" %>
       </nav>
