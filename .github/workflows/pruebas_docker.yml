@@ -47,7 +47,7 @@ jobs:
           bundler-cache: true
 
       - name: Crear la base de datos en el contenedor
-        run: bin/rails db:create db:schema:load
+                run: bundle exec rails db:create db:schema:load
 
       - name: Verificar la funcion dentro del contenedor
         run: psql -h localhost -U material_tracker -d material_tracker_test -c "\df nivel*"
@@ -55,4 +55,4 @@ jobs:
           PGPASSWORD: postgres
 
       - name: Ejecutar las pruebas
-        run: bin/rails test
+        run: bundle exec rails test
