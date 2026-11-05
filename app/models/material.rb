@@ -11,4 +11,8 @@ class Material < ApplicationRecord
   def total_stock
     stocks.sum(:quantity)
   end
+
+  def stock_bajo?
+    total_stock < min_stock
+  end
 end

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <title>Material Tracker</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= stylesheet_link_tag :app %>
+</head>
+<body>
+  <header class="barra">
+    <strong>Material Tracker</strong>
+    <% if usuario_actual %>
+      <nav>
+        <%= link_to "Inventario", inventario_path %>
+        <%= link_to "Registrar movimiento", new_movimiento_path %>
+        <span><%= usuario_actual.name %> (<%= usuario_actual.role %>)</span>
+        <%= button_to "Salir", logout_path, method: :delete, class: "boton-secundario" %>
+      </nav>
+    <% end %>
+  </header>
+  <main>
+    <% flash.each do |tipo, mensaje| %>
+      <p class="aviso <%= tipo %>"><%= mensaje %></p>
+    <% end %>
+    <%= yield %>
+  </main>
+</body>
+</html>

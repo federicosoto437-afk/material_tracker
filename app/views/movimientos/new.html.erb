@@ -1,0 +1,23 @@
+<section class="tarjeta angosta">
+  <h1>Registrar movimiento</h1>
+  <% if @errores.present? %>
+    <div class="aviso alert">
+      <% @errores.each do |error| %>
+        <p><%= error %></p>
+      <% end %>
+    </div>
+  <% end %>
+  <%= form_with model: @movimiento, url: movimientos_path do |f| %>
+    <%= f.label :material_id, "Material" %>
+    <%= f.collection_select :material_id, @materiales, :id, :name, prompt: "Selecciona un material" %>
+    <%= f.label :warehouse_id, "Almacén" %>
+    <%= f.collection_select :warehouse_id, @almacenes, :id, :name, prompt: "Selecciona un almacén" %>
+    <%= f.label :movement_type, "Tipo" %>
+    <%= f.select :movement_type, [["Entrada", "entrada"], ["Salida", "salida"], ["Ajuste", "ajuste"]] %>
+    <%= f.label :quantity, "Cantidad" %>
+    <%= f.number_field :quantity, step: 0.01, required: true %>
+    <%= f.label :notes, "Notas" %>
+    <%= f.text_area :notes, rows: 2 %>
+    <%= f.submit "Guardar" %>
+  <% end %>
+</section>

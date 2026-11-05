@@ -1,17 +1,7 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
-
-one:
-  sku: MyString
-  name: MyString
-  unit: MyString
-  unit_cost: 9.99
-  min_stock: 9.99
-  supplier: one
-
-two:
-  sku: MyString
-  name: MyString
-  unit: MyString
-  unit_cost: 9.99
-  min_stock: 9.99
-  supplier: two
+cemento:
+  sku: CEM-50
+  name: Cemento gris 50 kg
+  unit: bulto
+  unit_cost: 185.50
+  min_stock: 100
+  supplier: cementos

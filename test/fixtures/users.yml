@@ -1,13 +1,17 @@
-# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+admin:
+  name: Laura Mendez
+  email: admin@constructify.com
+  password_digest: <%= BCrypt::Password.create("Admin123!") %>
+  role: admin
 
-one:
-  name: MyString
-  email: MyString
-  password_digest: MyString
-  role: MyString
+almacenista:
+  name: Carlos Ruiz
+  email: almacen@constructify.com
+  password_digest: <%= BCrypt::Password.create("Almacen123!") %>
+  role: almacenista
 
-two:
-  name: MyString
-  email: MyString
-  password_digest: MyString
-  role: MyString
+supervisor:
+  name: Sofia Vega
+  email: supervisor@constructify.com
+  password_digest: <%= BCrypt::Password.create("Super123!") %>
+  role: supervisor

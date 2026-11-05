@@ -1,0 +1,51 @@
+<h1>Inventario</h1>
+<table>
+  <thead>
+    <tr>
+      <th>SKU</th>
+      <th>Material</th>
+      <th>Proveedor</th>
+      <th>Stock total</th>
+      <th>Mínimo</th>
+      <th>Estado</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @materiales.each do |material| %>
+      <tr class="<%= "bajo" if material.stock_bajo? %>">
+        <td><%= material.sku %></td>
+        <td><%= material.name %></td>
+        <td><%= material.supplier.name %></td>
+        <td><%= number_with_precision(material.total_stock, precision: 2) %> <%= material.unit %></td>
+        <td><%= number_with_precision(material.min_stock, precision: 2) %></td>
+        <td><%= material.stock_bajo? ? "Stock bajo" : "OK" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<h2>Últimos movimientos</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Fecha</th>
+      <th>Tipo</th>
+      <th>Material</th>
+      <th>Almacén</th>
+      <th>Cantidad</th>
+      <th>Usuario</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @movimientos.each do |movimiento| %>
+      <tr>
+        <td><%= movimiento.created_at.strftime("%d/%m/%Y %H:%M") %></td>
+        <td><%= movimiento.movement_type %></td>
+        <td><%= movimiento.material.name %></td>
+        <td><%= movimiento.warehouse.name %></td>
+        <td><%= number_with_precision(movimiento.quantity, precision: 2) %></td>
+        <td><%= movimiento.user.name %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

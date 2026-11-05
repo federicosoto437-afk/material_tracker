@@ -1,0 +1,10 @@
+<section class="tarjeta angosta">
+  <h1>Iniciar sesión</h1>
+  <%= form_with url: login_path do |f| %>
+    <%= f.label :email, "Correo" %>
+    <%= f.email_field :email, required: true %>
+    <%= f.label :password, "Contraseña" %>
+    <%= f.password_field :password, required: true %>
+    <%= f.submit "Entrar" %>
+  <% end %>
+</section>

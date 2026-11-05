@@ -14,6 +14,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_04_174659) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
+  create_table "inventario", id: :serial, force: :cascade do |t|
+    t.string "sku", limit: 20, null: false
+    t.string "nombre", limit: 100, null: false
+    t.string "unidad", limit: 20, null: false
+    t.decimal "cantidad", precision: 12, scale: 2, default: "0.0", null: false
+    t.datetime "actualizado_en", precision: nil, default: -> { "now()" }, null: false
+
+    t.check_constraint "cantidad >= 0::numeric", name: "inventario_cantidad_check"
+    t.unique_constraint ["sku"], name: "inventario_sku_key"
+  end
+
   create_table "materials", force: :cascade do |t|
     t.string "sku", null: false
     t.string "name", null: false

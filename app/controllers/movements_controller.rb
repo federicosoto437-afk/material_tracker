@@ -7,8 +7,12 @@ class MovementsController < ApplicationController
   end
 
   def create
-    movement = Movement.create!(movement_params.merge(user: current_user))
-    render json: movement_json(movement), status: :created
+    resultado = RegistrarMovimiento.call(usuario: current_user, params: movement_params)
+    if resultado.exito?
+      render json: movement_json(resultado.movimiento), status: :created
+    else
+      render json: { error: resultado.errores }, status: 422
+    end
   end
 
   private

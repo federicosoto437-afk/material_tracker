@@ -1,4 +1,11 @@
 Rails.application.routes.draw do
+  root "inventario#index"
+  get "login", to: "sesiones#new"
+  post "login", to: "sesiones#create"
+  delete "logout", to: "sesiones#destroy"
+  get "inventario", to: "inventario#index"
+  resources :movimientos, only: [:new, :create]
+
   resource :session, only: [:create, :destroy]
   resources :materials
   resources :movements, only: [:index, :create]
