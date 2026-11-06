@@ -24,6 +24,9 @@ class RegistrarMovimiento
     Resultado.new(exito: true, movimiento: movimiento, errores: [])
   rescue ActiveRecord::RecordInvalid => error
     fallo(*error.record.errors.full_messages)
+  rescue ActiveRecord::StatementInvalid => error
+    raise unless error.cause.is_a?(PG::CheckViolation)
+    fallo(error.cause.result.error_field(PG::PG_DIAG_MESSAGE_PRIMARY))
   end
 
   private

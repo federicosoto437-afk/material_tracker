@@ -11,6 +11,81 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: ajustar_stock(bigint, bigint, numeric, text, bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ajustar_stock(p_material_id bigint, p_warehouse_id bigint, p_delta numeric, p_operacion text, p_movement_id bigint) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v_anterior numeric;
+  v_nueva numeric;
+BEGIN
+  IF p_delta = 0 THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO stocks (material_id, warehouse_id, quantity, created_at, updated_at)
+  VALUES (p_material_id, p_warehouse_id, 0, NOW(), NOW())
+  ON CONFLICT (material_id, warehouse_id) DO NOTHING;
+
+  SELECT quantity INTO v_anterior
+  FROM stocks
+  WHERE material_id = p_material_id AND warehouse_id = p_warehouse_id
+  FOR UPDATE;
+
+  v_nueva := v_anterior + p_delta;
+
+  IF v_nueva < 0 THEN
+    RAISE EXCEPTION 'Stock insuficiente: hay % y se requieren %', v_anterior, -p_delta
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  UPDATE stocks
+  SET quantity = v_nueva, updated_at = NOW()
+  WHERE material_id = p_material_id AND warehouse_id = p_warehouse_id;
+
+  INSERT INTO inventario_auditoria (movement_id, material_id, warehouse_id, operacion, cantidad_anterior, cantidad_nueva)
+  VALUES (p_movement_id, p_material_id, p_warehouse_id, p_operacion, v_anterior, v_nueva);
+END;
+$$;
+
+
+--
+-- Name: aplicar_movimiento_a_stock(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.aplicar_movimiento_a_stock() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    PERFORM ajustar_stock(NEW.material_id, NEW.warehouse_id, efecto_movimiento(NEW.movement_type, NEW.quantity), TG_OP, NEW.id);
+  ELSIF TG_OP = 'DELETE' THEN
+    PERFORM ajustar_stock(OLD.material_id, OLD.warehouse_id, -efecto_movimiento(OLD.movement_type, OLD.quantity), TG_OP, OLD.id);
+  ELSIF OLD.material_id = NEW.material_id AND OLD.warehouse_id = NEW.warehouse_id THEN
+    PERFORM ajustar_stock(NEW.material_id, NEW.warehouse_id, efecto_movimiento(NEW.movement_type, NEW.quantity) - efecto_movimiento(OLD.movement_type, OLD.quantity), TG_OP, NEW.id);
+  ELSE
+    PERFORM ajustar_stock(OLD.material_id, OLD.warehouse_id, -efecto_movimiento(OLD.movement_type, OLD.quantity), TG_OP, OLD.id);
+    PERFORM ajustar_stock(NEW.material_id, NEW.warehouse_id, efecto_movimiento(NEW.movement_type, NEW.quantity), TG_OP, NEW.id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+--
+-- Name: efecto_movimiento(text, numeric); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.efecto_movimiento(p_tipo text, p_cantidad numeric) RETURNS numeric
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  SELECT CASE p_tipo WHEN 'salida' THEN -p_cantidad ELSE p_cantidad END;
+$$;
+
+
+--
 -- Name: nivel_inventario(bigint, bigint, timestamp without time zone); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -94,6 +169,43 @@ CREATE TABLE public.inventario (
     actualizado_en timestamp without time zone DEFAULT now() NOT NULL,
     CONSTRAINT inventario_cantidad_check CHECK ((cantidad >= (0)::numeric))
 );
+
+
+--
+-- Name: inventario_auditoria; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.inventario_auditoria (
+    id bigint NOT NULL,
+    movement_id bigint,
+    material_id bigint NOT NULL,
+    warehouse_id bigint NOT NULL,
+    operacion character varying NOT NULL,
+    cantidad_anterior numeric(12,2) NOT NULL,
+    cantidad_nueva numeric(12,2) NOT NULL,
+    usuario_bd character varying DEFAULT CURRENT_USER NOT NULL,
+    registrado_en timestamp(6) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT inventario_auditoria_operacion_check CHECK (((operacion)::text = ANY ((ARRAY['INSERT'::character varying, 'UPDATE'::character varying, 'DELETE'::character varying])::text[])))
+);
+
+
+--
+-- Name: inventario_auditoria_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.inventario_auditoria_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: inventario_auditoria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.inventario_auditoria_id_seq OWNED BY public.inventario_auditoria.id;
 
 
 --
@@ -373,6 +485,13 @@ ALTER TABLE ONLY public.inventario ALTER COLUMN id SET DEFAULT nextval('public.i
 
 
 --
+-- Name: inventario_auditoria id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventario_auditoria ALTER COLUMN id SET DEFAULT nextval('public.inventario_auditoria_id_seq'::regclass);
+
+
+--
 -- Name: materials id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -420,6 +539,14 @@ ALTER TABLE ONLY public.warehouses ALTER COLUMN id SET DEFAULT nextval('public.w
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: inventario_auditoria inventario_auditoria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventario_auditoria
+    ADD CONSTRAINT inventario_auditoria_pkey PRIMARY KEY (id);
 
 
 --
@@ -502,6 +629,27 @@ CREATE INDEX idx_movements_material_almacen_fecha ON public.movements USING btre
 
 
 --
+-- Name: index_inventario_auditoria_on_material_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_inventario_auditoria_on_material_id ON public.inventario_auditoria USING btree (material_id);
+
+
+--
+-- Name: index_inventario_auditoria_on_material_id_and_registrado_en; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_inventario_auditoria_on_material_id_and_registrado_en ON public.inventario_auditoria USING btree (material_id, registrado_en);
+
+
+--
+-- Name: index_inventario_auditoria_on_warehouse_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_inventario_auditoria_on_warehouse_id ON public.inventario_auditoria USING btree (warehouse_id);
+
+
+--
 -- Name: index_materials_on_sku; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -565,6 +713,13 @@ CREATE UNIQUE INDEX index_users_on_email ON public.users USING btree (email);
 
 
 --
+-- Name: movements trg_movimientos_actualizan_stock; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_movimientos_actualizan_stock AFTER INSERT OR DELETE OR UPDATE OF material_id, warehouse_id, movement_type, quantity ON public.movements FOR EACH ROW EXECUTE FUNCTION public.aplicar_movimiento_a_stock();
+
+
+--
 -- Name: stocks fk_rails_015c017e64; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -573,11 +728,27 @@ ALTER TABLE ONLY public.stocks
 
 
 --
+-- Name: inventario_auditoria fk_rails_0629fcf08f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventario_auditoria
+    ADD CONSTRAINT fk_rails_0629fcf08f FOREIGN KEY (warehouse_id) REFERENCES public.warehouses(id);
+
+
+--
 -- Name: movements fk_rails_1b3d8ec724; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.movements
     ADD CONSTRAINT fk_rails_1b3d8ec724 FOREIGN KEY (material_id) REFERENCES public.materials(id);
+
+
+--
+-- Name: inventario_auditoria fk_rails_1ec82967bc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.inventario_auditoria
+    ADD CONSTRAINT fk_rails_1ec82967bc FOREIGN KEY (material_id) REFERENCES public.materials(id);
 
 
 --
@@ -619,6 +790,7 @@ ALTER TABLE ONLY public.movements
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261106142347'),
 ('20261105183313'),
 ('20261105175916'),
 ('20261104174659'),

@@ -29,6 +29,7 @@ jobs:
       DB_USERNAME: material_tracker
       DB_PASSWORD: postgres
       PARALLEL_WORKERS: 1
+      PGPASSWORD: postgres
 
     steps:
       - name: Descargar el codigo
@@ -49,10 +50,13 @@ jobs:
       - name: Crear la base de datos en el contenedor
         run: bundle exec rails db:create db:schema:load
 
-      - name: Verificar la funcion dentro del contenedor
-        run: psql -h localhost -U material_tracker -d material_tracker_test -c "\df nivel*"
-        env:
-          PGPASSWORD: postgres
+      - name: Verificar funciones y disparador en el contenedor
+        run: |
+          psql -h localhost -U material_tracker -d material_tracker_test -c "\df nivel*"
+          psql -h localhost -U material_tracker -d material_tracker_test -c "SELECT tgname, tgrelid::regclass AS tabla FROM pg_trigger WHERE NOT tgisinternal;"
+
+      - name: Probar el disparador en el contenedor
+        run: psql -h localhost -U material_tracker -d material_tracker_test -f db/pruebas_disparador.sql
 
       - name: Ejecutar las pruebas
         run: bundle exec rails test
